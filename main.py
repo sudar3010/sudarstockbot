@@ -9,12 +9,12 @@ import os
 import re
 import json
 
-# === Telegram Bot Token ===
-BOT_TOKEN = "YOUR_BOT_TOKEN"
+# Telegram Bot Token
+BOT_TOKEN = "8108841318:AAE8aoEPqOU6SrwzRvtAjOQAG9AjD2IT2NI"
 
-# === Supabase Credentials ===
-SUPABASE_URL = "YOUR_SUPABASE_URL"
-SUPABASE_KEY = "YOUR_SUPABASE_KEY"
+# Supabase credentials
+SUPABASE_URL = "https://xdkcliccyvzbikpxfwds.supabase.co"
+SUPABASE_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Inhka2NsaWNjeXZ6YmlrcHhmd2RzIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTU1Mjk2NTQsImV4cCI6MjA3MTEwNTY1NH0.FwCWmTV4BkQ8ZbWoKSHuNXdStddCUY_o2RtcrGj8urw"
 
 # ✅ Supabase client
 supabase = create_client(SUPABASE_URL, SUPABASE_KEY)
