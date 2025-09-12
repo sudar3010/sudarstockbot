@@ -170,6 +170,9 @@ def background_worker():
 @web_app.route('/')
 def home():
     return "✅ Bot is running!"
+@web_app.route('/status')
+def status():
+    return {"status": "ok", "message": "Bot and background worker are running ✅"}
 
 # -------------------------
 # Main entry
