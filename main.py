@@ -190,11 +190,24 @@ async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
     username = update.effective_user.username or "unknown"
     first_name = update.effective_user.first_name or "Investor"
     save_user(chat_id, username)
-    await update.message.reply_text(
-        f"Hi {first_name}! You’re now subscribed.\n"
-        "Type /add INFY to track a stock or /summary to view your watchlist."
+
+    welcome_message = (
+        f"🌟 *Welcome {first_name}!* 🌟\n\n"
+        "I am your *Stock Watchlist Bot* 📊\n\n"
+        "Here’s how you can use me:\n"
+        "• ➕ /add SYMBOL — Add a stock to your watchlist (e.g., /add TCS)\n"
+        "• ❌ /remove SYMBOL — Remove a stock from your watchlist\n"
+        "• 📋 /summary — View all stocks in your watchlist\n\n"
+        "I’ll keep you updated with your stocks regularly! 🚀\n\n"
+        "💡 *Tip:* Start by adding a stock using /add command."
     )
-    await async_send_direct_message(chat_id, "📈 You’ll start receiving updates soon.")
+
+    # Send formatted message using Markdown
+    await update.message.reply_text(welcome_message, parse_mode='Markdown')
+    
+    # Optional: Send DM confirmation
+    await async_send_direct_message(chat_id, "✅ You are now subscribed to the Stock Watchlist Bot. Happy investing! 💰")
+
 
 async def add_stock(update: Update, context: ContextTypes.DEFAULT_TYPE):
     chat_id = update.effective_chat.id
