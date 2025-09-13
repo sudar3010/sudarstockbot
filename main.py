@@ -6,6 +6,7 @@ import time
 import datetime
 import threading
 import asyncio
+import ast
 from flask import Flask
 from telegram import Bot, Update
 from telegram.ext import ApplicationBuilder, CommandHandler, ContextTypes
@@ -48,6 +49,80 @@ def send_direct_message(chat_id, message):
     """Safe wrapper for use in sync functions"""
     asyncio.run(async_send_direct_message(chat_id, message))
 
+def normalize_watchlist(wl):
+    """
+    Ensure watchlist is always returned as a clean list of strings.
+    Handles cases where Supabase returns:
+      - a real list: ['TCS']
+      - a json string: '["TCS"]'
+      - a weird multiline string: '["\nT\nC\nS\n"]'
+      - a plain string: "TCS"
+    """
+    if wl is None:
+        return []
+
+    # already a list
+    if isinstance(wl, list):
+        cleaned = []
+        for item in wl:
+            if item is None:
+                continue
+            s = str(item)
+            s = s.replace("\n", "").strip().strip('"').strip()
+            if s:
+                cleaned.append(s)
+        return cleaned
+
+    # if it's a bytes object
+    if isinstance(wl, (bytes, bytearray)):
+        try:
+            wl = wl.decode()
+        except Exception:
+            wl = str(wl)
+
+    # wl is a string (most common problem)
+    if isinstance(wl, str):
+        text = wl.strip()
+        # Try json.loads first
+        try:
+            parsed = json.loads(text)
+            if isinstance(parsed, list):
+                return [str(x).replace("\n", "").strip().strip('"').strip() for x in parsed if x is not None]
+            # if parsed is string inside quotes etc.
+            if isinstance(parsed, str):
+                s = parsed.replace("\n", "").strip().strip('"').strip()
+                return [s] if s else []
+        except Exception:
+            pass
+
+        # Try python literal eval (handles "['TCS']" or weird quotes)
+        try:
+            parsed = ast.literal_eval(text)
+            if isinstance(parsed, list):
+                return [str(x).replace("\n", "").strip().strip('"').strip() for x in parsed if x is not None]
+            if isinstance(parsed, str):
+                s = parsed.replace("\n", "").strip().strip('"').strip()
+                return [s] if s else []
+        except Exception:
+            pass
+
+        # Fallback: remove newlines and surrounding brackets/quotes, then split by comma
+        cleaned = text.replace("\n", " ").strip()
+        # remove surrounding [] if present
+        if cleaned.startswith("[") and cleaned.endswith("]"):
+            cleaned = cleaned[1:-1]
+        # split
+        parts = [p.strip().strip('"').strip("'") for p in cleaned.split(",") if p.strip()]
+        if parts:
+            return parts
+
+        # final fallback: single value
+        single = text.replace("\n", "").strip().strip('"').strip("'")
+        return [single] if single else []
+
+    # any other type -> convert to string
+    return [str(wl).replace("\n", "").strip()]
+
 def save_user(chat_id, username):
     try:
         existing = supabase.table("users").select("chat_id").eq("chat_id", chat_id).execute()
@@ -64,13 +139,21 @@ def add_to_watchlist(chat_id, symbol):
     try:
         resp = supabase.table("users").select("watchlist").eq("chat_id", chat_id).single().execute()
         if resp.data:
-            wl = resp.data.get("watchlist", [])
-            if isinstance(wl, str):
-                wl = [s.strip().strip('"') for s in wl.strip("{}[]").split(",") if s.strip() and s.strip() != '[]']
+            wl_raw = resp.data.get("watchlist", [])
+            wl = normalize_watchlist(wl_raw)
             if symbol not in wl:
                 wl.append(symbol)
+                # update with clean list
                 supabase.table("users").update({"watchlist": wl}).eq("chat_id", chat_id).execute()
             return wl
+        else:
+            # user row missing — create it with this symbol
+            supabase.table("users").insert({
+                "chat_id": chat_id,
+                "username": None,
+                "watchlist": [symbol]
+            }).execute()
+            return [symbol]
     except Exception as e:
         print(f"[add_to_watchlist] supabase error: {e}")
     return []
@@ -79,9 +162,8 @@ def remove_from_watchlist(chat_id, symbol):
     try:
         resp = supabase.table("users").select("watchlist").eq("chat_id", chat_id).single().execute()
         if resp.data:
-            wl = resp.data.get("watchlist", [])
-            if isinstance(wl, str):
-                wl = [s.strip().strip('"') for s in wl.strip("{}[]").split(",") if s.strip() and s.strip() != '[]']
+            wl_raw = resp.data.get("watchlist", [])
+            wl = normalize_watchlist(wl_raw)
             if symbol in wl:
                 wl.remove(symbol)
                 supabase.table("users").update({"watchlist": wl}).eq("chat_id", chat_id).execute()
@@ -95,7 +177,7 @@ def get_watchlist(chat_id):
     try:
         resp = supabase.table("users").select("watchlist").eq("chat_id", chat_id).single().execute()
         if resp.data:
-            return resp.data.get("watchlist") or []
+            return normalize_watchlist(resp.data.get("watchlist") or [])
     except Exception as e:
         print(f"[get_watchlist] supabase error: {e}")
     return []
@@ -138,6 +220,9 @@ async def remove_stock(update: Update, context: ContextTypes.DEFAULT_TYPE):
 async def show_summary(update: Update, context: ContextTypes.DEFAULT_TYPE):
     chat_id = update.effective_chat.id
     wl = get_watchlist(chat_id)
+    # normalize here as extra safety (get_watchlist already normalizes)
+    wl = normalize_watchlist(wl)
+
     if not wl:
         await update.message.reply_text("📭 Your watchlist is empty.")
     else:
