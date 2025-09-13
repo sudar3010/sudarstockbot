@@ -198,7 +198,7 @@ async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
         "• ➕ /add SYMBOL — Add a stock to your watchlist (e.g., /add TCS)\n"
         "• ❌ /remove SYMBOL — Remove a stock from your watchlist\n"
         "• 📋 /summary — View all stocks in your watchlist\n\n"
-        "I’ll keep you updated with your stocks regularly! 🚀\n\n"
+        "⏰ *Daily Reminder:* You’ll receive stock updates every day at *10:45 AM IST*.\n\n"
         "💡 *Tip:* Start by adding a stock using /add command."
     )
 
