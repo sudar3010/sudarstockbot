@@ -151,14 +151,14 @@ def background_worker():
     print("[background_worker] started")
     while True:
         try:
-            resp = supabase.table("users").select("chat_id, watchlist").execute()
-            for u in (resp.data or []):
-                chat_id = u.get("chat_id")
-                wl = u.get("watchlist") or []
-                if wl:
-                    now = datetime.datetime.now().strftime("%H:%M:%S")
-                    msg = f"⏰ Reminder {now}\n" + "\n".join(f"• {s}" for s in wl)
-                    send_direct_message(chat_id, msg)
+           # resp = supabase.table("users").select("chat_id, watchlist").execute()
+           # for u in (resp.data or []):
+           #     chat_id = u.get("chat_id")
+            #    wl = u.get("watchlist") or []
+            #    if wl:
+            #        now = datetime.datetime.now().strftime("%H:%M:%S")
+             #       msg = f"⏰ Reminder {now}\n" + "\n".join(f"• {s}" for s in wl)
+              #      send_direct_message(chat_id, msg)
             time.sleep(3600)  # hourly
         except Exception as e:
             print(f"[background_worker] error: {e}")
